@@ -83,7 +83,9 @@ def make_lmdb(mode,
 
     # create lmdb environment
     # obtain data size for one image
-    img = mmcv.imread(osp.join(data_path, all_img_list[0]), flag='unchanged')
+    # modified by wz
+    # img = mmcv.imread(osp.join(data_path, all_img_list[0]), flag='unchanged')
+    img = mmcv.imread(all_img_list[0], flag='unchanged')
     _, img_byte = cv2.imencode('.png', img,
                                [cv2.IMWRITE_PNG_COMPRESSION, compress_level])
     data_size_per_img = img_byte.nbytes
@@ -98,7 +100,9 @@ def make_lmdb(mode,
     for idx, (path, key) in enumerate(zip(all_img_list, keys)):
         pbar.update()
         key_byte = key.encode('ascii')
-        img = mmcv.imread(osp.join(data_path, path), flag='unchanged')
+        # modified by wz
+        # img = mmcv.imread(osp.join(data_path, path), flag='unchanged')
+        img = mmcv.imread(path, flag='unchanged')
         h, w, c = img.shape
         _, img_byte = cv2.imencode(
             '.png', img, [cv2.IMWRITE_PNG_COMPRESSION, compress_level])

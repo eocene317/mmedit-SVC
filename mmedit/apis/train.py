@@ -158,7 +158,7 @@ def _dist_train(model,
     data_loaders = [build_dataloader(ds, **train_loader_cfg) for ds in dataset]
 
     # put model on gpus
-    find_unused_parameters = cfg.get('find_unused_parameters', False)
+    find_unused_parameters = cfg.get('find_unused_parameters', True)
     model = DistributedDataParallelWrapper(
         model,
         device_ids=[torch.cuda.current_device()],

@@ -12,7 +12,7 @@ import lmdb
 import mmcv
 
 
-def make_lmdb(mode, data_path, lmdb_path, batch=5000, compress_level=1):
+def make_lmdb(mode, data_path, lmdb_path, batch=5000, compress_level=1, scale=4):
     """Create lmdb for the REDS dataset.
 
     Contents of lmdb. The file structure is:
@@ -61,7 +61,8 @@ def make_lmdb(mode, data_path, lmdb_path, batch=5000, compress_level=1):
     if mode in ['train_sharp', 'train_blur', 'train_blur_comp']:
         h_dst, w_dst = 720, 1280
     else:
-        h_dst, w_dst = 180, 320
+        # h_dst, w_dst = 180, 320
+        h_dst, w_dst = 720 // scale, 640 // scale
 
     if osp.exists(lmdb_path):
         print(f'Folder {lmdb_path} already exists. Exit.')
@@ -228,39 +229,41 @@ if __name__ == '__main__':
     args = parse_args()
     root_path = args.root_path
 
-    # unzip files and obtain available folder names
-    folder_paths = unzip(root_path)
-    folder_paths = set(folder_paths)
+    # # unzip files and obtain available folder names
+    # folder_paths = unzip(root_path)
+    # folder_paths = set(folder_paths)
 
-    train_folders = [
-        osp.basename(v) for v in folder_paths if 'train' in osp.basename(v)
-    ]
+    # train_folders = [
+    #     osp.basename(v) for v in folder_paths if 'train' in osp.basename(v)
+    # ]
 
-    for train_folder in train_folders:
-        train_path = osp.join(root_path, train_folder)
-        val_path = osp.join(root_path, train_folder.replace('train_', 'val_'))
-        # folders with 'bicubic' will have subfolder X4
-        if 'bicubic' in train_folder:
-            train_path = osp.join(train_path, 'X4')
-            val_path = osp.join(val_path, 'X4')
-        # merge train and val datasets
-        merge_train_val(train_path, val_path)
+    # for train_folder in train_folders:
+    #     train_path = osp.join(root_path, train_folder)
+    #     val_path = osp.join(root_path, train_folder.replace('train_', 'val_'))
+    #     # folders with 'bicubic' will have subfolder X4
+    #     if 'bicubic' in train_folder:
+    #         train_path = osp.join(train_path, 'X4')
+    #         val_path = osp.join(val_path, 'X4')
+    #     # merge train and val datasets
+    #     merge_train_val(train_path, val_path)
 
-        # remove validation folders
-        if 'bicubic' in train_folder:
-            val_path = osp.dirname(val_path)
-        print(f'Remove {val_path}')
-        shutil.rmtree(val_path)
-
+    #     # remove validation folders
+    #     if 'bicubic' in train_folder:
+    #         val_path = osp.dirname(val_path)
+    #     print(f'Remove {val_path}')
+    #     shutil.rmtree(val_path)
     # generate image list anno file
-    generate_anno_file(root_path)
-
+    train_folders = os.listdir(root_path)
+    scale = 2
     # create lmdb file
     if args.make_lmdb:
         for train_folder in train_folders:
             lmdb_path = osp.join(root_path, train_folder + '.lmdb')
             data_path = osp.join(root_path, train_folder)
             if 'bicubic' in train_folder:
-                data_path = osp.join(data_path, 'X4')
+                lmdb_path = osp.join(root_path, train_folder + f'_X{scale}.lmdb')
+                data_path = osp.join(data_path, f'X{scale}')
             make_lmdb(
-                mode=train_folder, data_path=data_path, lmdb_path=lmdb_path)
+                mode=train_folder, data_path=data_path, lmdb_path=lmdb_path, scale=scale)
+    generate_anno_file(root_path)
+    

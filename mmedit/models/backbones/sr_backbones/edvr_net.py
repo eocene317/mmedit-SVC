@@ -329,7 +329,8 @@ class EDVRNet(nn.Module):
                  num_blocks_extraction=5,
                  num_blocks_reconstruction=10,
                  center_frame_idx=2,
-                 with_tsa=True):
+                 with_tsa=True,
+                 scale=4):
         super().__init__()
         self.center_frame_idx = center_frame_idx
         self.with_tsa = with_tsa
@@ -377,7 +378,7 @@ class EDVRNet(nn.Module):
         self.conv_hr = nn.Conv2d(64, 64, 3, 1, 1)
         self.conv_last = nn.Conv2d(64, out_channels, 3, 1, 1)
         self.img_upsample = nn.Upsample(
-            scale_factor=4, mode='bilinear', align_corners=False)
+            scale_factor=scale, mode='bilinear', align_corners=False)
         # activation function
         self.lrelu = nn.LeakyReLU(negative_slope=0.1, inplace=True)
 
@@ -433,7 +434,7 @@ class EDVRNet(nn.Module):
 
         # reconstruction
         out = self.reconstruction(feat)
-        out = self.lrelu(self.upsample1(out))
+        # out = self.lrelu(self.upsample1(out))
         out = self.lrelu(self.upsample2(out))
         out = self.lrelu(self.conv_hr(out))
         out = self.conv_last(out)

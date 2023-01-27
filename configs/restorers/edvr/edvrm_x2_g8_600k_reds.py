@@ -1,4 +1,4 @@
-exp_name = 'edvrm_x4_g8_600k_reds'
+exp_name = 'edvrm_x2_g8_600k_reds'
 
 # model settings
 model = dict(
@@ -13,7 +13,8 @@ model = dict(
         num_blocks_extraction=5,
         num_blocks_reconstruction=10,
         center_frame_idx=2,
-        with_tsa=True),
+        with_tsa=True,
+        scale=2),
     pixel_loss=dict(type='CharbonnierLoss', loss_weight=1.0, reduction='sum'))
 # model training and testing settings
 train_cfg = dict(tsa_iter=50000)
@@ -101,32 +102,32 @@ data = dict(
         times=1000,
         dataset=dict(
             type=train_dataset_type,
-            lq_folder=f'{data_root}/train_sharp_bicubic/X4',
+            lq_folder=f'{data_root}/train_sharp_bicubic/X2',
             gt_folder=f'{data_root}/train_sharp',
             ann_file=f'{data_root}/meta_info_REDS_GT.txt',
             num_input_frames=5,
             pipeline=train_pipeline,
-            scale=4,
+            scale=2,
             val_partition='REDS4',
             test_mode=False)),
     val=dict(
         type=val_dataset_type,
-        lq_folder=f'{data_root}/train_sharp_bicubic/X4',
+        lq_folder=f'{data_root}/train_sharp_bicubic/X2',
         gt_folder=f'{data_root}/train_sharp',
         ann_file=f'{data_root}/meta_info_REDS_GT.txt',
         num_input_frames=5,
         pipeline=test_pipeline,
-        scale=4,
+        scale=2,
         val_partition='REDS4',
         test_mode=True),
     test=dict(
         type=val_dataset_type,
-        lq_folder=f'{data_root}/train_sharp_bicubic/X4',
+        lq_folder=f'{data_root}/train_sharp_bicubic/X2',
         gt_folder=f'{data_root}/train_sharp',
         ann_file=f'{data_root}/meta_info_REDS_GT.txt',
         num_input_frames=5,
         pipeline=test_pipeline,
-        scale=4,
+        scale=2,
         val_partition='REDS4',
         test_mode=True),
 )
