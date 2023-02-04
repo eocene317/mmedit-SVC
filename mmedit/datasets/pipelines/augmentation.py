@@ -929,7 +929,12 @@ class GenerateFrameIndiceswithPadding:
                      f'{self.filename_tmpl.format(idx)}.png')
             for idx in frame_list
         ]
-        gt_paths = [osp.join(gt_path_root, clip_name, f'{frame_name}.png')]
+        gt_paths = [
+            osp.join(gt_path_root, clip_name,
+                     f'{self.filename_tmpl.format(idx)}.png')
+            for idx in frame_list[num_pad-1:num_pad+2]
+        ]
+        # gt_paths = [osp.join(gt_path_root, clip_name, f'{frame_name}.png')]
         results['lq_path'] = lq_paths
         results['gt_path'] = gt_paths
 
@@ -997,7 +1002,11 @@ class GenerateFrameIndices:
             osp.join(lq_path_root, clip_name, f'{v:08d}.png')
             for v in neighbor_list
         ]
-        gt_path = [osp.join(gt_path_root, clip_name, f'{frame_name}.png')]
+        # 添加gt的前后两帧，目的在于数据增强可以颠倒顺序，参考TemporalReverse
+        gt_path = []
+        gt_path.append(osp.join(gt_path_root, clip_name, f'{center_frame_idx - 1:08d}.png'))
+        gt_path.append(osp.join(gt_path_root, clip_name, f'{frame_name}.png'))
+        gt_path.append(osp.join(gt_path_root, clip_name, f'{center_frame_idx + 1:08d}.png'))
         results['lq_path'] = lq_path
         results['gt_path'] = gt_path
         results['interval'] = interval
