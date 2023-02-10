@@ -37,27 +37,25 @@ class ECNNet(nn.Module):
         with_tsa (bool): Whether to use TSA module. Default: True.
     """
 
-    def __init__(self, with_fusion=False):
+    def __init__(self):
         super().__init__()
-        self.with_fusion = with_fusion
         self.upsample = nn.UpsamplingBilinear2d(scale_factor=2)
 
-        if with_fusion:
-            self.fusion = nn.Sequential(
-                nn.Conv2d(2, 32, kernel_size=9, padding=9 // 2),
-                nn.PReLU(),
-                nn.Conv2d(32, 32, kernel_size=5, padding=5 // 2),
-                nn.PReLU(),
-                nn.Conv2d(32, 1, kernel_size=5, padding=5 // 2)
-            ) 
+        self.fusion = nn.Sequential(
+            nn.Conv2d(6, 32, kernel_size=9, padding=9 // 2),
+            nn.PReLU(),
+            nn.Conv2d(32, 32, kernel_size=5, padding=5 // 2),
+            nn.PReLU(),
+            nn.Conv2d(32, 3, kernel_size=5, padding=5 // 2)
+        )
 
         # learn the offset
-        self.conv1 = nn.Conv2d(2, 64, kernel_size=9, padding=9 // 2)
+        self.conv1 = nn.Conv2d(6, 64, kernel_size=9, padding=9 // 2)
         self.conv2 = nn.Conv2d(64, 32, kernel_size=5, padding=5 // 2)
         self.conv3 = nn.Conv2d(32, 18, kernel_size=5, padding=5 // 2)
         self.relu = nn.ReLU(inplace=True)
 
-        self.deform_conv1 = DeformConv2d(1, 1, kernel_size=3, padding=1, im2col_step=8)
+        self.deform_conv1 = DeformConv2d(3, 3, kernel_size=3, padding=1, im2col_step=256)
 
     def forward(self, bl, el):
         """Forward function for ECNNET.
@@ -71,7 +69,7 @@ class ECNNet(nn.Module):
         lr_patch = bl[:, t // 2, ...]
         hr0_patch = el[:, t1 // 2 - 1, ...]
 
-        lr0_up = self.upsample(lr0_patch)   
+        lr0_up = self.upsample(lr0_patch)
         lr0_patch_up = torch.cat([lr0_up, hr0_patch], dim=1)
         res = self.relu(self.conv1(lr0_patch_up))
         res = self.relu(self.conv2(res))
@@ -80,13 +78,11 @@ class ECNNet(nn.Module):
         lr_patch_up = self.upsample(lr_patch)
         x = self.deform_conv1(lr_patch_up, res)
         
-        if self.with_fusion:
-            res0 = lr0_up - hr0_patch
-            res = torch.cat([res0, x], dim=1)
-            res = self.fusion(res)
-            x = x + res
+        res0 = lr0_up - hr0_patch
+        res = torch.cat([res0, x], dim=1)
+        res = self.fusion(res)
 
-        return x
+        return x + res
 
     def init_weights(self, pretrained=None, strict=True):
         """Init weights for models.

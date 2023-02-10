@@ -8,7 +8,10 @@ from mmcv.fileio import FileClient
 from mmedit.core.mask import (bbox2mask, brush_stroke_mask, get_irregular_mask,
                               random_bbox)
 from ..registry import PIPELINES
+import psutil
 
+def get_available_memory():
+    return psutil.virtual_memory().available / 1024 / 1024 / 1024 # GB
 
 @PIPELINES.register_module()
 class LoadImageFromFile:
@@ -164,6 +167,11 @@ class LoadImageFromFileList(LoadImageFromFile):
             if self.use_cache:
                 if filepath in self.cache:
                     img = self.cache[filepath]
+                    imgs.append(img)
+                    shapes.append(img.shape)
+                    if self.save_original_img:
+                        ori_imgs.append(img.copy())
+                    continue
                 else:
                     img_bytes = self.file_client.get(filepath)
                     img = mmcv.imfrombytes(
@@ -171,7 +179,7 @@ class LoadImageFromFileList(LoadImageFromFile):
                         flag=self.flag,
                         channel_order=self.channel_order,
                         backend=self.backend)  # HWC
-                    self.cache[filepath] = img
+                    # self.cache[filepath] = img
             else:
                 img_bytes = self.file_client.get(filepath)
                 img = mmcv.imfrombytes(
@@ -198,6 +206,10 @@ class LoadImageFromFileList(LoadImageFromFile):
             shapes.append(img.shape)
             if self.save_original_img:
                 ori_imgs.append(img.copy())
+            
+            # cache the final image
+            if self.use_cache and get_available_memory() > 2:
+                self.cache[filepath] = img
 
         results[self.key] = imgs
         results[f'{self.key}_path'] = filepaths

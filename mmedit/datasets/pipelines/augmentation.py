@@ -961,9 +961,10 @@ class GenerateFrameIndices:
             REDS dataset.
     """
 
-    def __init__(self, interval_list, frames_per_clip=99):
+    def __init__(self, interval_list, frames_per_clip=99, use_lmdb=False):
         self.interval_list = interval_list
         self.frames_per_clip = frames_per_clip
+        self.use_lmdb = use_lmdb
 
     def __call__(self, results):
         """Call function.
@@ -998,15 +999,25 @@ class GenerateFrameIndices:
 
         lq_path_root = results['lq_path']
         gt_path_root = results['gt_path']
-        lq_path = [
-            osp.join(lq_path_root, clip_name, f'{v:08d}.png')
-            for v in neighbor_list
-        ]
+        if not self.use_lmdb:
+            lq_path = [
+                osp.join(lq_path_root, clip_name, f'{v:08d}.png')
+                for v in neighbor_list
+            ]
+        else:
+            lq_path = [
+                f'{clip_name}_{v:08d}' for v in neighbor_list
+            ]
         # 添加gt的前后两帧，目的在于数据增强可以颠倒顺序，参考TemporalReverse
         gt_path = []
-        gt_path.append(osp.join(gt_path_root, clip_name, f'{center_frame_idx - 1:08d}.png'))
-        gt_path.append(osp.join(gt_path_root, clip_name, f'{frame_name}.png'))
-        gt_path.append(osp.join(gt_path_root, clip_name, f'{center_frame_idx + 1:08d}.png'))
+        if not self.use_lmdb:
+            gt_path.append(osp.join(gt_path_root, clip_name, f'{center_frame_idx - 1:08d}.png'))
+            gt_path.append(osp.join(gt_path_root, clip_name, f'{frame_name}.png'))
+            gt_path.append(osp.join(gt_path_root, clip_name, f'{center_frame_idx + 1:08d}.png'))
+        else:
+            gt_path.append(f'{clip_name}_{center_frame_idx - 1:08d}')
+            gt_path.append(f'{clip_name}_{frame_name}')
+            gt_path.append(f'{clip_name}_{center_frame_idx + 1:08d}')
         results['lq_path'] = lq_path
         results['gt_path'] = gt_path
         results['interval'] = interval

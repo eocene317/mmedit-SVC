@@ -1,10 +1,20 @@
-exp_name = 'ecn_x2_test_600k_reds'
+exp_name = 'edvrm_x2_g8_600k_reds'
 
 # model settings
 model = dict(
     type='ECN',
     generator=dict(
-        type='ECNNet'),
+        type='EDVRNet',
+        in_channels=1,
+        out_channels=1,
+        mid_channels=64,
+        num_frames=5,
+        deform_groups=8,
+        num_blocks_extraction=5,
+        num_blocks_reconstruction=10,
+        center_frame_idx=2,
+        with_tsa=True,
+        scale=2),
     pixel_loss=dict(type='CharbonnierLoss', loss_weight=1.0, reduction='sum'))
 # model training and testing settings
 train_cfg = dict(tsa_iter=50000)
@@ -15,25 +25,31 @@ data_root = 'data/REDS/train/encode/32x32/recon_png'
 train_dataset_type = 'SRREDSDataset'
 val_dataset_type = 'SRREDSDataset'
 train_pipeline = [
-    dict(type='GenerateFrameIndices', interval_list=[1], frames_per_clip=99),
+    dict(type='GenerateFrameIndices', interval_list=[1], frames_per_clip=99, use_lmdb=True),
     dict(type='TemporalReverse', keys=['lq_path', 'gt_path'], reverse_ratio=0),
     dict(
         type='LoadImageFromFileList',
-        io_backend='disk',
+        io_backend='lmdb',
+        db_path=f'{data_root}/bl.lmdb',
+        use_cache=True,
         key='lq',
-        flag='unchanged'),
+        flag='unchanged',
+        convert_to='Y'),
     dict(
         type='LoadImageFromFileList',
-        io_backend='disk',
+        io_backend='lmdb',
+        db_path=f'{data_root}/el.lmdb',
+        use_cache=True,
         key='gt',
-        flag='unchanged'),
+        flag='unchanged',
+        convert_to='Y'),
     dict(type='RescaleToZeroOne', keys=['lq', 'gt']),
-    dict(
-        type='Normalize',
-        keys=['lq', 'gt'],
-        mean=[0, 0, 0],
-        std=[1, 1, 1],
-        to_rgb=True),
+    # dict(
+    #     type='Normalize',
+    #     keys=['lq', 'gt'],
+    #     mean=[0, 0, 0],
+    #     std=[1, 1, 1],
+    #     to_rgb=True),
     dict(type='PairedRandomCrop', gt_patch_size=256),
     dict(
         type='Flip', keys=['lq', 'gt'], flip_ratio=0.5,
@@ -48,21 +64,25 @@ test_pipeline = [
     dict(type='GenerateFrameIndiceswithPadding', padding='reflection_circle'),
     dict(
         type='LoadImageFromFileList',
-        io_backend='disk',
+        io_backend='lmdb',
         key='lq',
-        flag='unchanged'),
+        flag='unchanged',
+        use_cache=True,
+        convert_to='Y'),
     dict(
         type='LoadImageFromFileList',
-        io_backend='disk',
+        io_backend='lmdb',
         key='gt',
-        flag='unchanged'),
+        flag='unchanged',
+        use_cache=True,
+        convert_to='Y'),
     dict(type='RescaleToZeroOne', keys=['lq', 'gt']),
-    dict(
-        type='Normalize',
-        keys=['lq', 'gt'],
-        mean=[0, 0, 0],
-        std=[1, 1, 1],
-        to_rgb=True),
+    # dict(
+    #     type='Normalize',
+    #     keys=['lq', 'gt'],
+    #     mean=[0, 0, 0],
+    #     std=[1, 1, 1],
+    #     to_rgb=True),
     dict(
         type='Collect',
         keys=['lq', 'gt'],
@@ -92,8 +112,8 @@ data = dict(
         times=1000,
         dataset=dict(
             type=train_dataset_type,
-            lq_folder=f'{data_root}/bl',
-            gt_folder=f'{data_root}/el',
+            lq_folder=f'{data_root}/bl.lmdb',
+            gt_folder=f'{data_root}/el.lmdb',
             ann_file=f'{data_root}/meta_info_REDS_GT.txt',
             num_input_frames=5,
             pipeline=train_pipeline,
@@ -102,8 +122,8 @@ data = dict(
             test_mode=False)),
     val=dict(
         type=val_dataset_type,
-        lq_folder=f'{data_root}/bl',
-        gt_folder=f'{data_root}/el',
+        lq_folder=f'{data_root}/bl.lmdb',
+        gt_folder=f'{data_root}/el.lmdb',
         ann_file=f'{data_root}/meta_info_REDS_GT.txt',
         num_input_frames=5,
         pipeline=test_pipeline,
@@ -112,8 +132,8 @@ data = dict(
         test_mode=True),
     test=dict(
         type=val_dataset_type,
-        lq_folder=f'{data_root}/bl',
-        gt_folder=f'{data_root}/el',
+        lq_folder=f'{data_root}/bl.lmdb',
+        gt_folder=f'{data_root}/el.lmdb',
         ann_file=f'{data_root}/meta_info_REDS_GT.txt',
         num_input_frames=5,
         pipeline=test_pipeline,
@@ -124,9 +144,9 @@ data = dict(
 
 # optimizer
 optimizers = dict(generator=dict(type='Adam', lr=2e-4, betas=(0.9, 0.999)))
-find_unused_parameters = False
+
 # learning policy
-total_iters = 300000
+total_iters = 600000
 lr_config = dict(
     policy='CosineRestart',
     by_epoch=False,
@@ -137,7 +157,6 @@ lr_config = dict(
 checkpoint_config = dict(interval=5000, save_optimizer=True, by_epoch=False)
 # remove gpu_collect=True in non distributed training
 evaluation = dict(interval=50000, save_image=False, gpu_collect=True)
-# evaluation = dict(interval=500, save_image=True)
 log_config = dict(
     interval=100,
     hooks=[
@@ -150,8 +169,8 @@ visual_config = None
 # runtime settings
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-work_dir = f'./work_dirs/{exp_name}'
-load_from = 'work_dirs/ecn_x2_test_600k_reds/latest.pth'
+work_dir = f'./train_dirs/{exp_name}'
+load_from = None
 # load_from = 'work_dirs/edvrm_x4_8x4_600k_reds_20210625-e29b71b5.pth'
 resume_from = None
 workflow = [('train', 1)]

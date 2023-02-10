@@ -297,7 +297,7 @@ class TSAFusion(nn.Module):
 
 
 @BACKBONES.register_module()
-class EDVRNet(nn.Module):
+class ECNNet(nn.Module):
     """EDVR network structure for video super-resolution.
 
     Now only support X4 upsampling factor.
